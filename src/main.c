@@ -11,9 +11,10 @@ int main() {
     uint32_t key[8] = {0, 0, 0, 0, 0, 0, 0, 0};
     uint32_t nonce[2] = {0, 0};
 
-    uint8_t in[] = "a realy realy realy realy long input or not, idk";
+    uint8_t in[] = "a realy realy realy realy long input or not, idk. Maybe shoul'd I say something else like: let's all love lain";
     uint8_t enc[sizeof(in)];
     uint8_t dec[sizeof(in)];
+    uint8_t hash[64]; 
 
     // cipher
     chacha_xor(enc, in,  sizeof(in), ctx, key, nonce);
@@ -34,6 +35,15 @@ int main() {
     printf("decr = 0x");
 	for (size_t j=0; j<sizeof(in); j++) {
 		printf("%02x", dec[j]);
+    }
+	printf("\n");
+
+    // hash
+    chacha_hash((uint32_t*)hash, ctx, in, sizeof(in));
+    
+    printf("hash = 0x");
+	for (size_t j=0; j<sizeof(hash); j++) {
+		printf("%02x", hash[j]);
     }
 	printf("\n");
 

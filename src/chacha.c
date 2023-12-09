@@ -71,18 +71,48 @@ void chacha_xor(uint8_t* out, const uint8_t* in, size_t size, uint32_t ctx[16],
 	for (size_t i=0; i*64<size; i++) {
 		chacha_block(tmp, ctx);
 
-		// dump key
-		printf("xorkey = 0x");
-		for (size_t j=0; j<64; j++) {
-			printf("%02x", ((uint8_t*)tmp)[j]);
-		}
-		printf("\n");
-
 		// counter +1
 		((uint64_t *)ctx)[6]++;
 		for (size_t j=0; j<64 && i*64+j < size; j++) {
 			out[i*64+j] = in[i*64+j] ^ ((uint8_t*)tmp)[j];
 		}
+	}
+
+	// clear
+    for (size_t i=0; i<16; i++)
+        tmp[i] = 0;
+}
+
+void chacha_hash(uint32_t hash[16], uint32_t ctx[16], const uint8_t* message, size_t size) {
+	// setup
+    uint32_t tmp[64];
+	
+	for (size_t i=0; i<16; i++)
+        hash[i] = 0;
+
+	chacha_init(ctx);
+	ctx[12]=ctx[13]=ctx[14]=ctx[15]= 0;   
+
+	// hash loop
+	for (size_t i=0; i*32<size; i++) {
+		// set ctx
+		size_t j;
+		for (j=0; j<32; j++){
+			((uint8_t*)ctx)[16+j] = 0;
+
+			if (i*32+j < size)
+				((uint8_t*)ctx)[16+j] = message[i*32+j];
+		}
+
+		// hash
+		chacha_block(tmp, ctx);
+		for(j=0; j<16; j++)
+			hash[j] ^= tmp[j];
+
+		// counter ++
+		((uint64_t*)ctx)[6]++;
+		if (((uint64_t*)ctx)[6] == 0)
+			((uint64_t*)ctx)[7]++;
 	}
 
 	// clear
