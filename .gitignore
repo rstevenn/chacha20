@@ -1,3 +1,9 @@
+# project ignore
+*.jpg
+*.key
+*.txt
+*.enc
+
 # Prerequisites
 *.d
 
