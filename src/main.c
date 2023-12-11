@@ -6,57 +6,10 @@
 void secure_rand(uint8_t* out, size_t size);
 
 #ifdef _WIN32 
-#include <windows.h>
-#include <wincrypt.h>
-# pragma comment(lib, "advapi32.lib")
-
-void secure_rand(uint8_t* out, size_t size)
-{
-    HCRYPTPROV hCryptProv;
-    LPCSTR UserName = "chacha20";
-
-    // get ctx
-    if(!CryptAcquireContext(
-        &hCryptProv,               // handle to the CSP
-        UserName,                  // container name 
-        NULL,                      // use the default provider
-        PROV_RSA_FULL,             // provider type
-        0))                        // flag values
-    {
-        printf("[ERR]: Can't access ctx provider");
-        exit(1);
-    }
-
-    // generate
-    if (!CryptGenRandom(hCryptProv, size, out)) {
-        printf("[ERR]: Can't generate random nb");
-        exit(1);
-    }
-
-    // release ctx
-    if (!CryptReleaseContext(hCryptProv, 0))
-    {
-        printf("[WRN]: The handle could not be released.\n");
-    }
-}
+#include "windows_imp.h"
 #else
-
-void secure_rand(uint8_t* out, size_t size) {
-    FILE* fp = fopen("/dev/urandom", "rb");
-    if (fp == NULL) {
-        printf("Can't access random générator\n");
-        exit(1);
-    }
-
-    if (fread(out, sizeof(*out), size, fp) != size) {
-        printf("Can't generate random bytes\n");
-        exit(1);
-    }
-    fclose(fp);
-}
-
+#include "linux_impl.h"
 #endif
-
 
 #define HELP_MSG "call the app with:\n\
  > ./app_name [enc, dec] <src_file> <key_file> <out_file>\n\
@@ -64,8 +17,6 @@ void secure_rand(uint8_t* out, size_t size) {
 
 #define block_1mb (1024*1024*16)
 #define block_16mb (1024*1024*16)
-#define block_256mb (1024*1024*256)
-#define block_512mb (1024*1024*512)
 #define block_size block_16mb
 
 uint8_t *read_file(char *path, uint64_t* size) {
@@ -156,7 +107,7 @@ int main(int argc, char* argv[]) {
         }
 
         // steam loop
-        while ((input_size = fread(inp_file, sizeof(uint8_t), block_16mb, fp_inp)) != 0) {
+        while ((input_size = fread(inp_file, sizeof(uint8_t), block_size, fp_inp)) != 0) {
             chacha_hash((uint32_t*)hash, ctx, inp_file, input_size);
         }
         write_file(argv[3], hash, sizeof(hash));
@@ -207,11 +158,7 @@ int main(int argc, char* argv[]) {
 ;        
         
         // stream loop
-        size_t i=0;
         while ((input_size = fread(inp_file, sizeof(uint8_t), block_size-1, fp_inp)) != 0) {
-            i++;
-            printf("block %llu\n", i);
-            
             *(uint64_t*)data = input_size+1;
             memcpy(&data[8], inp_file, input_size);
             chacha_xor_strm(enc, data, input_size+1, ctx, (uint32_t*)key_file, nonce, &counter);
@@ -275,11 +222,7 @@ int main(int argc, char* argv[]) {
 ;        
         
         // stream loop
-        size_t i=0;
-        while ((input_size = fread(inp_file, sizeof(uint8_t), block_size, fp_inp)) != 0) {
-            i++;
-            printf("block %llu\n", i);
-            
+        while ((input_size = fread(inp_file, sizeof(uint8_t), block_size, fp_inp)) != 0) {            
             
             memcpy(data, inp_file, input_size-1);
             chacha_xor_strm(dec, data, input_size-1, ctx, (uint32_t*)key_file, nonce, &counter);
