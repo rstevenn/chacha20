@@ -124,7 +124,7 @@ void write_file(char *path, const uint8_t* data, long size) {
 uint8_t inp_file[block_size];
 uint8_t data[block_size];
 uint8_t  enc[block_size];
-
+uint8_t  dec[block_size];
 
 /*
  call the app with:
@@ -208,7 +208,7 @@ int main(int argc, char* argv[]) {
         
         // stream loop
         size_t i=0;
-        while ((input_size = fread(inp_file, sizeof(uint8_t), block_16mb-1, fp_inp)) != 0) {
+        while ((input_size = fread(inp_file, sizeof(uint8_t), block_size-1, fp_inp)) != 0) {
             i++;
             printf("block %llu\n", i);
             
@@ -241,35 +241,58 @@ int main(int argc, char* argv[]) {
         }
 
         // read inp_file && key
-        uint64_t input_size;
         uint64_t key_size;
-        uint8_t* inp_file = read_file(argv[2], &input_size);
         uint8_t* key_file = read_file(argv[3], &key_size);
+        uint64_t input_size;
 
+        FILE *fp_inp = fopen(argv[2], "rb");
+        if (fp_inp == NULL) { 
+            printf("Can't read the file %s", argv[2]);
+            exit(-1);
+        }
+
+        FILE *fp_out = fopen(argv[4], "wb");
+        if (fp_out == NULL) { 
+            printf("Can't read the file %s", argv[4]);
+            exit(-1);
+        }
+
+        // setup data
         if (key_size != 128) {
-            printf("[invalid key length (expect: 128, got: %llu)]\n", key_size);
+            printf("[invalid key length (expect: 128, got: %lu)]\n", (long)key_size);
             printf("[key path: %s] ", argv[3]);
             printf(HELP_MSG);
             exit(1);
         }
 
-        // setup decode data
+        uint64_t counter = 0;
         uint32_t nonce[2] = {0, 0};
-        ((uint64_t*)nonce)[0] = ((uint64_t*)inp_file)[0];
 
-        uint64_t data_size = input_size-sizeof(uint64_t);        
-        uint8_t* data = (uint8_t*)malloc(sizeof(uint8_t)*data_size);
-        uint8_t* dec  = (uint8_t*)malloc(sizeof(uint8_t)*input_size);
-
-        // decode and write
-        chacha_xor(dec, &inp_file[8], data_size, ctx, (uint32_t*)key_file, nonce);
-        if (((uint64_t*)dec)[0] != (uint64_t)input_size-sizeof(uint64_t)) {
-            printf("[err]: invalid key (got: %llu, expected: %llu)\n", 
-                    ((uint64_t*)dec)[0], (uint64_t)input_size-sizeof(uint64_t));
-            exit(1);
+        int out;
+        if ((out = fread(nonce, 1, sizeof(nonce), fp_inp)) != sizeof(nonce)) {
+            printf("Can't read the nonce in inp file %s, %d bytes read\n", argv[2], out); exit(1);
         }
-        memcpy(data, &(dec[8]), data_size);
-        write_file(argv[4], data, data_size);
+;        
+        
+        // stream loop
+        size_t i=0;
+        while ((input_size = fread(inp_file, sizeof(uint8_t), block_size, fp_inp)) != 0) {
+            i++;
+            printf("block %llu\n", i);
+            
+            
+            memcpy(data, inp_file, input_size-1);
+            chacha_xor_strm(dec, data, input_size-1, ctx, (uint32_t*)key_file, nonce, &counter);
+
+            if (*(uint64_t*)dec != input_size) {
+                printf("[err]: invalid key or corruped input file [got %d, expected %d]\n", *(uint64_t*)dec, input_size);
+                exit(1);
+            }
+
+            if (fwrite(&dec[8], 1, input_size-1, fp_out) != input_size-1) {
+                printf("Can't write in output file %s\n", argv[4]); exit(1);
+            }            
+        }
 
         // liberate resource
         for (size_t i=0; i<128; i++)
@@ -279,9 +302,6 @@ int main(int argc, char* argv[]) {
             nonce[i] = 0;
 
         free(key_file);
-        free(inp_file);
-        free(data);
-        free(dec);
 
     } else {
         printf("[invalid action: %s ] ", argv[1]);
