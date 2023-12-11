@@ -62,7 +62,11 @@ void secure_rand(uint8_t* out, size_t size) {
  > ./app_name [enc, dec] <src_file> <key_file> <out_file>\n\
  > ./app_name hash <src_file> <out_file>\n"
 
+#define block_1mb (1024*1024*16)
 #define block_16mb (1024*1024*16)
+#define block_256mb (1024*1024*256)
+#define block_512mb (1024*1024*512)
+#define block_size block_16mb
 
 uint8_t *read_file(char *path, uint64_t* size) {
     // open file
@@ -117,9 +121,9 @@ void write_file(char *path, const uint8_t* data, long size) {
 }
 
 // heap mem
-uint8_t inp_file[block_16mb];
-uint8_t data[block_16mb];
-uint8_t  enc[block_16mb];
+uint8_t inp_file[block_size];
+uint8_t data[block_size];
+uint8_t  enc[block_size];
 
 
 /*
