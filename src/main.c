@@ -47,8 +47,9 @@ void secure_rand(uint8_t* out, size_t size)
  > ./app_name [enc, dec] <src_file> <key_file> <out_file>\n\
  > ./app_name hash <src_file> <out_file> "
 
+#define block_16mb (1024*1024*16)
 
-uint8_t *read_file(char *path, long* size) {
+uint8_t *read_file(char *path, uint64_t* size) {
     // open file
     FILE *fp = fopen(path, "rb");
     if (fp == NULL) { 
@@ -56,15 +57,17 @@ uint8_t *read_file(char *path, long* size) {
         exit(-1);
     }
 
-    // get file size
+    // get file size    
     fseek(fp, 0, SEEK_END);
     *size = ftell(fp);
     fseek(fp, 0, SEEK_SET);
+    printf("%llu\n", *size);
+ 
 
     // read data
     uint8_t *buffer = (uint8_t *)malloc(sizeof(uint8_t) * (*size));
     if (buffer == NULL) {
-        printf("Unable to allocate a buffer of %lu chars", *size);
+        printf("Unable to allocate a buffer of %llu chars", *size);
         exit(1);
     }
 
@@ -106,7 +109,7 @@ void write_file(char *path, const uint8_t* data, long size) {
 int main(int argc, char* argv[]) {
     // setup
     uint32_t ctx[16];
-    
+
     // parse args
     if (argc < 4) {
         printf("[invalid args] ");
@@ -116,14 +119,26 @@ int main(int argc, char* argv[]) {
     
     // modes implementation
     if (strcmp(argv[1], "hash") == 0) {
-        long input_size;
+        uint64_t input_size;
+        uint8_t inp_file[block_16mb];
         uint8_t hash[64];
-        
-        uint8_t* inp_file = read_file(argv[2], &input_size);
-        chacha_hash((uint32_t*)hash, ctx, inp_file, input_size);
+
+        // setup
+        memset(hash, 0, 64);
+        FILE *fp_inp = fopen(argv[2], "rb");
+        if (fp_inp == NULL) { 
+            printf("Can't read the file %s", argv[2]);
+            exit(-1);
+        }
+
+        // steam loop
+        while ((input_size = fread(inp_file, sizeof(uint8_t), block_16mb, fp_inp)) != 0) {
+            chacha_hash((uint32_t*)hash, ctx, inp_file, input_size);
+        }
         write_file(argv[3], hash, sizeof(hash));
 
-        free(inp_file);
+        // free resource
+        fclose(fp_inp);
 
     } else if (strcmp(argv[1], "enc") == 0) {
         // check args
@@ -134,37 +149,57 @@ int main(int argc, char* argv[]) {
         }
 
         // read inp_file && key
-        long input_size;
-        long key_size;
-        uint8_t* inp_file = read_file(argv[2], &input_size);
+        uint64_t key_size;
         uint8_t* key_file = read_file(argv[3], &key_size);
+        uint64_t input_size;
+        uint8_t inp_file[block_16mb];
 
+        FILE *fp_inp = fopen(argv[2], "rb");
+        if (fp_inp == NULL) { 
+            printf("Can't read the file %s", argv[2]);
+            exit(-1);
+        }
+
+        FILE *fp_out = fopen(argv[4], "wb");
+        if (fp_out == NULL) { 
+            printf("Can't read the file %s", argv[4]);
+            exit(-1);
+        }
+
+        // setup data
         if (key_size != 128) {
-            printf("[invalid key length (expect: 128, got: %lu)]\n", key_size);
+            printf("[invalid key length (expect: 128, got: %lu)]\n", (long)key_size);
             printf("[key path: %s] ", argv[3]);
             printf(HELP_MSG);
             exit(1);
         }
 
-        // build data to encrypt
+        uint64_t counter = 0;
         uint32_t nonce[2] = {0, 0};
         secure_rand((uint8_t*)nonce, sizeof(nonce));
 
-        uint64_t data_size = sizeof(uint64_t) + input_size;        
-        uint8_t* data = (uint8_t*)malloc(sizeof(uint8_t)*data_size);
-        uint8_t* enc  = (uint8_t*)malloc(sizeof(uint8_t)*data_size+sizeof(uint64_t));
-
-        if (data == NULL || enc == NULL) {
-            printf("can't allocate memory\n");
-            exit(1);
+        if (fwrite(nonce, 1, sizeof(nonce), fp_out) != sizeof(nonce)) {
+            printf("Can't write in output file %s\n", argv[4]); exit(1);
         }
-        ((uint64_t*)data)[0] = data_size;
-        memcpy(&(data[8]), inp_file, input_size);
+;        
+        uint8_t data[block_16mb];
+        uint8_t  enc[block_16mb];
 
-        // encrypt and write
-        chacha_xor(&enc[8], data, data_size, ctx, (uint32_t*)key_file, nonce);
-        ((uint64_t*)enc)[0] = *(uint64_t*)nonce;
-        write_file(argv[4], enc, data_size+sizeof(uint64_t));
+
+        // stream loop
+        size_t i=0;
+        while ((input_size = fread(inp_file, sizeof(uint8_t), block_16mb-1, fp_inp)) != 0) {
+            i++;
+            printf("block %llu\n", i);
+            
+            *(uint64_t*)data = input_size+1;
+            memcpy(&data[8], inp_file, input_size);
+            chacha_xor_strm(enc, data, input_size+1, ctx, (uint32_t*)key_file, nonce, &counter);
+
+            if (fwrite(enc, 1, input_size+1, fp_out) != input_size+1) {
+                printf("Can't write in output file %s\n", argv[4]); exit(1);
+            }            
+        }
 
         // liberate resource
         for (size_t i=0; i<128; i++)
@@ -173,10 +208,9 @@ int main(int argc, char* argv[]) {
         for (size_t i=0; i<2; i++)
             nonce[i] = 0;
 
+        fclose(fp_inp);
+        fclose(fp_out);
         free(key_file);
-        free(inp_file);
-        free(data);
-        free(enc);
 
     } else if (strcmp(argv[1], "dec") == 0) {
         // check args
@@ -187,13 +221,13 @@ int main(int argc, char* argv[]) {
         }
 
         // read inp_file && key
-        long input_size;
-        long key_size;
+        uint64_t input_size;
+        uint64_t key_size;
         uint8_t* inp_file = read_file(argv[2], &input_size);
         uint8_t* key_file = read_file(argv[3], &key_size);
 
         if (key_size != 128) {
-            printf("[invalid key length (expect: 128, got: %lu)]\n", key_size);
+            printf("[invalid key length (expect: 128, got: %llu)]\n", key_size);
             printf("[key path: %s] ", argv[3]);
             printf(HELP_MSG);
             exit(1);

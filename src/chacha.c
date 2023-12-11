@@ -84,6 +84,37 @@ void chacha_xor(uint8_t* out, const uint8_t* in, size_t size, uint32_t ctx[16],
         tmp[i] = 0;
 }
 
+void chacha_xor_strm(uint8_t* out, const uint8_t* in, size_t size, uint32_t ctx[16],
+                     const uint32_t key[8], const uint32_t nonce[2], uint64_t* count) {
+	
+	// setup state
+	chacha_init(ctx);
+	for (size_t i=0; i<8; i++)
+		ctx[4+i] = key[i];
+
+	((uint64_t*)ctx)[6] = *count; // counter
+	ctx[14] = nonce[1];
+	ctx[15] = nonce[2];
+
+	// xor loop
+	uint32_t tmp[16];
+	for (size_t i=0; i*64<size; i++) {
+		chacha_block(tmp, ctx);
+
+		// counter +1
+		((uint64_t *)ctx)[6]++;
+		for (size_t j=0; j<64 && i*64+j < size; j++) {
+			out[i*64+j] = in[i*64+j] ^ ((uint8_t*)tmp)[j];
+		}
+	}
+
+    *count = ((uint64_t*)ctx)[6] ;
+	// clear
+    for (size_t i=0; i<16; i++)
+        tmp[i] = 0;
+}
+
+
 void chacha_hash(uint32_t hash[16], uint32_t ctx[16], const uint8_t* message, size_t size) {
 	// setup
     uint32_t tmp[64];
@@ -119,4 +150,48 @@ void chacha_hash(uint32_t hash[16], uint32_t ctx[16], const uint8_t* message, si
 	// clear
     for (size_t i=0; i<16; i++)
         tmp[i] = 0;
+}
+
+
+void chacha_hash_strm(uint32_t hash[16], uint32_t ctx[16], const uint8_t* message, 
+                      size_t size, uint32_t count[4]) {
+
+	// setup
+    uint32_t tmp[64];
+
+	chacha_init(ctx);
+	ctx[12] = count[0]; ctx[13] = count[1];   
+	ctx[14] = count[2]; ctx[15] = count[3];   
+
+	// hash loop
+	for (size_t i=0; i*32<size; i++) {
+		// set ctx
+		size_t j;
+		for (j=0; j<32; j++){
+			((uint8_t*)ctx)[16+j] = 0;
+
+			if (i*32+j < size)
+				((uint8_t*)ctx)[16+j] = message[i*32+j];
+		}
+
+		// hash
+		chacha_block(tmp, ctx);
+		for(j=0; j<16; j++)
+			hash[j] ^= tmp[j];
+
+		// counter ++
+		((uint64_t*)ctx)[6]++;
+		if (((uint64_t*)ctx)[6] == 0)
+			((uint64_t*)ctx)[7]++;
+	}
+
+
+	// out
+	count[0] = ctx[12]; count[1] = ctx[13];   
+	count[2] = ctx[14]; count[3] = ctx[15];
+
+	// clear
+    for (size_t i=0; i<16; i++)
+        tmp[i] = 0;
+
 }
