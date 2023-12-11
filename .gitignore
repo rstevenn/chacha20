@@ -3,6 +3,8 @@
 *.key
 *.txt
 *.enc
+*vgcore.*
+chacha_enc
 
 # Prerequisites
 *.d

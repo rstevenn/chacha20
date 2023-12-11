@@ -60,7 +60,7 @@ void secure_rand(uint8_t* out, size_t size) {
 
 #define HELP_MSG "call the app with:\n\
  > ./app_name [enc, dec] <src_file> <key_file> <out_file>\n\
- > ./app_name hash <src_file> <out_file> "
+ > ./app_name hash <src_file> <out_file>\n"
 
 #define block_16mb (1024*1024*16)
 
@@ -116,6 +116,12 @@ void write_file(char *path, const uint8_t* data, long size) {
     fclose(fp);
 }
 
+// heap mem
+uint8_t inp_file[block_16mb];
+uint8_t data[block_16mb];
+uint8_t  enc[block_16mb];
+
+
 /*
  call the app with:
  > ./app_name [enc, dec] <src_file> <key_file> <out_file> 
@@ -135,7 +141,6 @@ int main(int argc, char* argv[]) {
     // modes implementation
     if (strcmp(argv[1], "hash") == 0) {
         uint64_t input_size;
-        uint8_t inp_file[block_16mb];
         uint8_t hash[64];
 
         // setup
@@ -167,7 +172,6 @@ int main(int argc, char* argv[]) {
         uint64_t key_size;
         uint8_t* key_file = read_file(argv[3], &key_size);
         uint64_t input_size;
-        uint8_t inp_file[block_16mb];
 
         FILE *fp_inp = fopen(argv[2], "rb");
         if (fp_inp == NULL) { 
@@ -197,10 +201,7 @@ int main(int argc, char* argv[]) {
             printf("Can't write in output file %s\n", argv[4]); exit(1);
         }
 ;        
-        uint8_t data[block_16mb];
-        uint8_t  enc[block_16mb];
-
-
+        
         // stream loop
         size_t i=0;
         while ((input_size = fread(inp_file, sizeof(uint8_t), block_16mb-1, fp_inp)) != 0) {

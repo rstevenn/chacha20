@@ -1,4 +1,5 @@
 #include <stdint.h>
+#include <stdio.h>
 
 #ifndef __CHACHA_20_H__
 #define __CHACHA_20_H__
