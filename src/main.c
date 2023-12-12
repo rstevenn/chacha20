@@ -15,7 +15,8 @@ void secure_rand(uint8_t* out, size_t size);
 
 #define HELP_MSG "call the app with:\n\
  > ./app_name [enc, dec] <src_file> <key_file> <out_file>\n\
- > ./app_name hash <src_file> <out_file>\n"
+ > ./app_name hash <src_file> <out_file>\n\
+>  ./app_name genkey <out_file>\n"
 
 #define block_1mb (1024*1024*16)
 #define block_16mb (1024*1024*16)
@@ -76,6 +77,7 @@ uint8_t inp_file[block_size+8];
 uint8_t data[block_size+8];
 uint8_t  enc[block_size+8];
 uint8_t  dec[block_size+8];
+uint8_t key[128];
 
 /*
  call the app with:
@@ -85,16 +87,20 @@ uint8_t  dec[block_size+8];
 int main(int argc, char* argv[]) {
     // setup
     uint32_t ctx[16];
-
-    // parse args
-    if (argc < 4) {
+ 
+    if (argc == 1) {
         printf("[invalid args] ");
         printf(HELP_MSG);
         exit(1);
     }
-    
+
     // modes implementation
     if (strcmp(argv[1], "hash") == 0) {
+        if (argc != 4) {
+            printf("[hash invalid args] ");
+            printf(HELP_MSG);
+            exit(1);
+        }
         uint64_t input_size;
         uint8_t hash[64];
 
@@ -181,7 +187,7 @@ int main(int argc, char* argv[]) {
 
     } else if (strcmp(argv[1], "dec") == 0) {
         // check args
-        if (argc < 5) {
+        if (argc != 5) {
             printf("[invalid dec args] ");
             printf(HELP_MSG);
             exit(1);
@@ -243,6 +249,22 @@ int main(int argc, char* argv[]) {
             nonce[i] = 0;
 
         free(key_file);
+
+    } else if (strcmp(argv[1], "genkey") == 0) {
+        if (argc != 3) {
+            printf("[genkey invalid args] ");
+            printf(HELP_MSG);
+            exit(1);
+        }
+
+        secure_rand(key, sizeof(key));
+
+        // write
+        write_file(argv[2], key, sizeof(key));
+
+        // free resource
+        for (int i=0; i<128; i++)
+            key[i] = 0;
 
     } else {
         printf("[invalid action: %s ] ", argv[1]);
