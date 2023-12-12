@@ -156,7 +156,7 @@ int main(int argc, char* argv[]) {
 ;        
         
         // stream loop
-        while ((input_size = fread(inp_file, sizeof(uint8_t), block_size-1, fp_inp)) != 0) {
+        while ((input_size = fread(inp_file, sizeof(uint8_t), block_size, fp_inp)) != 0) {
             *(uint64_t*)data = input_size+8;
             memcpy(&data[8], inp_file, input_size);
             chacha_xor_strm(enc, data, input_size+8, ctx, (uint32_t*)key_file, nonce, &counter);
@@ -219,13 +219,12 @@ int main(int argc, char* argv[]) {
         }        
         
         // stream loop
-        while ((input_size = fread(inp_file, sizeof(uint8_t), block_size, fp_inp)) != 0) {            
-            
-            memcpy(data, inp_file, input_size);
-            chacha_xor_strm(dec, data, input_size, ctx, (uint32_t*)key_file, nonce, &counter);
+        while ((input_size = fread(inp_file, sizeof(uint8_t), block_size+8, fp_inp)) != 0) {            
+            //memcpy(data, inp_file, input_size);
+            chacha_xor_strm(dec, inp_file, input_size, ctx, (uint32_t*)key_file, nonce, &counter);
 
             if (*(uint64_t*)dec != input_size) {
-                printf("[err]: invalid key or corruped input file [got %d, expected %d]\n", *(uint64_t*)dec, input_size);
+                printf("[err]: invalid key or corruped input file [got %ldu, expected %ldu]\n", *(uint64_t*)dec, (uint64_t)input_size);
                 exit(1);
             }
 
