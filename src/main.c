@@ -31,8 +31,6 @@ uint8_t *read_file(char *path, uint64_t* size) {
     fseek(fp, 0, SEEK_END);
     *size = ftell(fp);
     fseek(fp, 0, SEEK_SET);
-    printf("%llu\n", *size);
- 
 
     // read data
     uint8_t *buffer = (uint8_t *)malloc(sizeof(uint8_t) * (*size));
@@ -161,7 +159,7 @@ int main(int argc, char* argv[]) {
         while ((input_size = fread(inp_file, sizeof(uint8_t), block_size-1, fp_inp)) != 0) {
             *(uint64_t*)data = input_size+8;
             memcpy(&data[8], inp_file, input_size);
-            chacha_xor_strm(enc, data, input_size+1, ctx, (uint32_t*)key_file, nonce, &counter);
+            chacha_xor_strm(enc, data, input_size+8, ctx, (uint32_t*)key_file, nonce, &counter);
 
             if (fwrite(enc, 1, input_size+8, fp_out) != input_size+8) {
                 printf("Can't write in output file %s\n", argv[4]); exit(1);

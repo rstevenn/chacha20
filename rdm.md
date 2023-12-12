@@ -4,4 +4,4 @@ A c implementation of chacha20 cipher and a hash based on it
 
 
 # src
-- https://en.wikipedia.org/wiki/G×äàoå
+- https://en.wikipedia.org/wiki/Salsa20
