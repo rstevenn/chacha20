@@ -1,6 +1,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <inttypes.h>
+
 #include "chacha.h"
 
 void secure_rand(uint8_t* out, size_t size);
@@ -224,7 +226,7 @@ int main(int argc, char* argv[]) {
             chacha_xor_strm(dec, inp_file, input_size, ctx, (uint32_t*)key_file, nonce, &counter);
 
             if (*(uint64_t*)dec != input_size) {
-                printf("[err]: invalid key or corruped input file [got %llu, expected %llu]\n", *(uint64_t*)dec, (uint64_t)input_size);
+                printf("[err]: invalid key or corruped input file [got "SCNu64", expected "SCNu64"]\n", *(uint64_t*)dec, (uint64_t)input_size);
                 exit(1);
             }
 
