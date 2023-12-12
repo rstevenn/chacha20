@@ -218,14 +218,13 @@ int main(int argc, char* argv[]) {
         int out;
         if ((out = fread(nonce, 1, sizeof(nonce), fp_inp)) != sizeof(nonce)) {
             printf("Can't read the nonce in inp file %s, %d bytes read\n", argv[2], out); exit(1);
-        }
-;        
+        }        
         
         // stream loop
         while ((input_size = fread(inp_file, sizeof(uint8_t), block_size, fp_inp)) != 0) {            
             
             memcpy(data, inp_file, input_size-1);
-            chacha_xor_strm(dec, data, input_size-1, ctx, (uint32_t*)key_file, nonce, &counter);
+            chacha_xor_strm(dec, data, input_size, ctx, (uint32_t*)key_file, nonce, &counter);
 
             if (*(uint64_t*)dec != input_size) {
                 printf("[err]: invalid key or corruped input file [got %d, expected %d]\n", *(uint64_t*)dec, input_size);
