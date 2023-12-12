@@ -72,10 +72,10 @@ void write_file(char *path, const uint8_t* data, long size) {
 }
 
 // heap mem
-uint8_t inp_file[block_size];
-uint8_t data[block_size];
-uint8_t  enc[block_size];
-uint8_t  dec[block_size];
+uint8_t inp_file[block_size+8];
+uint8_t data[block_size+8];
+uint8_t  enc[block_size+8];
+uint8_t  dec[block_size+8];
 
 /*
  call the app with:
@@ -159,11 +159,11 @@ int main(int argc, char* argv[]) {
         
         // stream loop
         while ((input_size = fread(inp_file, sizeof(uint8_t), block_size-1, fp_inp)) != 0) {
-            *(uint64_t*)data = input_size+1;
+            *(uint64_t*)data = input_size+8;
             memcpy(&data[8], inp_file, input_size);
             chacha_xor_strm(enc, data, input_size+1, ctx, (uint32_t*)key_file, nonce, &counter);
 
-            if (fwrite(enc, 1, input_size+1, fp_out) != input_size+1) {
+            if (fwrite(enc, 1, input_size+8, fp_out) != input_size+8) {
                 printf("Can't write in output file %s\n", argv[4]); exit(1);
             }            
         }
@@ -223,7 +223,7 @@ int main(int argc, char* argv[]) {
         // stream loop
         while ((input_size = fread(inp_file, sizeof(uint8_t), block_size, fp_inp)) != 0) {            
             
-            memcpy(data, inp_file, input_size-1);
+            memcpy(data, inp_file, input_size);
             chacha_xor_strm(dec, data, input_size, ctx, (uint32_t*)key_file, nonce, &counter);
 
             if (*(uint64_t*)dec != input_size) {
@@ -231,7 +231,7 @@ int main(int argc, char* argv[]) {
                 exit(1);
             }
 
-            if (fwrite(&dec[8], 1, input_size-1, fp_out) != input_size-1) {
+            if (fwrite(&dec[8], 1, input_size-8, fp_out) != input_size-8) {
                 printf("Can't write in output file %s\n", argv[4]); exit(1);
             }            
         }
