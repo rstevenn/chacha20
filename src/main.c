@@ -224,7 +224,7 @@ int main(int argc, char* argv[]) {
             chacha_xor_strm(dec, inp_file, input_size, ctx, (uint32_t*)key_file, nonce, &counter);
 
             if (*(uint64_t*)dec != input_size) {
-                printf("[err]: invalid key or corruped input file [got %ldu, expected %ldu]\n", *(uint64_t*)dec, (uint64_t)input_size);
+                printf("[err]: invalid key or corruped input file [got %llu, expected %llu]\n", *(uint64_t*)dec, (uint64_t)input_size);
                 exit(1);
             }
 
