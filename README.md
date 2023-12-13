@@ -2,31 +2,31 @@
 A c implementation of chacha20 cipher and a hash based on it
 !! Probably not secure and full of vulenrability
 
-# build
-## requirement
+## build
+### requirement
 * gcc
 
-## linux
+### linux
 > ./build.sh
 
-## windows
+### windows
 to implement
 
-# run
-## doc
+## run
+### doc
 call chacha20 with:
  > ./chacha20 (enc, dec) <src_file> <key_file> <out_file>  # encrypt/decrypt a file\
  > ./chacha20 hash <src_file> <out_file> # hash a file\
  > ./chacha20 help\
  > ./chacha20 genkey <out_file> # generate a 128bits key file
 
-## linux
+### linux
 > ./bin/chacha20
 
-## windows
+### windows
 > ./bin/chacha20.exe
 
-# src
+## src
 - https://en.wikipedia.org/wiki/Salsa20
 
 
