@@ -15,9 +15,9 @@ to implement
 # run
 ## doc
 call chacha20 with:
- > ./chacha20 (enc, dec) <src_file> <key_file> <out_file>  # encrypt/decrypt a file
- > ./chacha20 hash <src_file> <out_file> # hash a file
- > ./chacha20 help                          
+ > ./chacha20 (enc, dec) <src_file> <key_file> <out_file>  # encrypt/decrypt a file\
+ > ./chacha20 hash <src_file> <out_file> # hash a file\
+ > ./chacha20 help\
  > ./chacha20 genkey <out_file> # generate a 128bits key file
 
 ## linux
