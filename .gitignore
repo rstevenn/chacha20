@@ -1,9 +1,10 @@
 # project ignore
-*.jpg
 *.key
-*.txt
 *.enc
 *vgcore.*
+
+bin/*
+!bin/.gitkeep 
 
 # Prerequisites
 *.d
