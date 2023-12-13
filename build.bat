@@ -1,0 +1,1 @@
+gcc -Ofast -flto src/chacha.c src/main.c -o bin/chacha20
