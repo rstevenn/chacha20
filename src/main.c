@@ -13,10 +13,11 @@ void secure_rand(uint8_t* out, size_t size);
 #include "linux_impl.h"
 #endif
 
-#define HELP_MSG "call the app with:\n\
- > ./app_name [enc, dec] <src_file> <key_file> <out_file>\n\
- > ./app_name hash <src_file> <out_file>\n\
->  ./app_name genkey <out_file>\n"
+#define HELP_MSG "call the chacha20 with:\n\
+ > ./chacha20 [enc, dec] <src_file> <key_file> <out_file>\n\
+ > ./chacha20 hash <src_file> <out_file>\n\
+ > ./chacha20 help\n\
+ > ./chacha20 genkey <out_file>\n"
 
 #define block_1mb (1024*1024*16)
 #define block_16mb (1024*1024*16)
@@ -80,9 +81,11 @@ uint8_t  dec[block_size+8];
 uint8_t key[128];
 
 /*
- call the app with:
- > ./app_name [enc, dec] <src_file> <key_file> <out_file> 
- > ./app_name hash <src_file> <out_file> 
+ call the chacha20 with:
+ > ./chacha20 [enc, dec] <src_file> <key_file> <out_file> 
+ > ./chacha20 hash <src_file> <out_file> 
+ > ./chacha20 help
+ > ./chacha20 genkey <out_file>
 */
 int main(int argc, char* argv[]) {
     // setup
@@ -266,6 +269,11 @@ int main(int argc, char* argv[]) {
         for (int i=0; i<128; i++)
             key[i] = 0;
 
+    } else if (strcmp(argv[1], "help") == 0){
+
+       printf("[help] ");
+       printf(HELP_MSG);
+
     } else {
         printf("[invalid action: %s ] ", argv[1]);
         printf(HELP_MSG);
@@ -275,6 +283,5 @@ int main(int argc, char* argv[]) {
 
     // free global var
     chacha_clear(ctx);
-    printf("end\n");
     return 0;
 }
