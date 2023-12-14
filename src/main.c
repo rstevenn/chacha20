@@ -22,6 +22,7 @@ void secure_rand(uint8_t* out, size_t size);
 #define block_1mb (1024*1024*16)
 #define block_16mb (1024*1024*16)
 #define block_size block_16mb
+#define KEY_SIZE (128/sizeof(uint8_t))
 
 uint8_t *read_file(char *path, uint64_t* size) {
     // open file
@@ -78,7 +79,7 @@ uint8_t inp_file[block_size+8];
 uint8_t data[block_size+8];
 uint8_t  enc[block_size+8];
 uint8_t  dec[block_size+8];
-uint8_t key[128];
+uint8_t key[KEY_SIZE];
 
 /*
  call the chacha20 with:
@@ -150,8 +151,8 @@ int main(int argc, char* argv[]) {
         }
 
         // setup data
-        if (key_size != 128) {
-            printf("[invalid key length (expect: 128, got: %lu)]\n", (long)key_size);
+        if (key_size != KEY_SIZE) {
+            printf("[invalid key length (expect: 32, got: %lu)]\n", (long)key_size);
             printf("[key path: %s] ", argv[3]);
             printf(HELP_MSG);
             exit(1);
@@ -214,7 +215,7 @@ int main(int argc, char* argv[]) {
         }
 
         // setup data
-        if (key_size != 128) {
+        if (key_size != KEY_SIZE) {
             printf("[invalid key length (expect: 128, got: %lu)]\n", (long)key_size);
             printf("[key path: %s] ", argv[3]);
             printf(HELP_MSG);
